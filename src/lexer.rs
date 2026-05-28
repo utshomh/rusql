@@ -93,6 +93,7 @@ impl Lexer {
         while let Some(current_char) = self.current_char() {
             match current_char {
                 ' ' | '\t' | '\r' | '\n' => self.skip_whitespaces(),
+                '\'' => tokens.push(self.lex_string()?),
                 _ => {
                     if current_char.is_numeric() {
                         tokens.push(self.lex_numeric()?);
@@ -189,6 +190,34 @@ impl Lexer {
         Ok(self.token(number_to_be, TokenKind::Numberic))
     }
 
+    fn lex_string(&mut self) -> Result<Token, LexError> {
+        self.advance(); // Consume starting qoute
+        let mut string_to_be = String::new();
+
+        while let Some(current_char) = self.current_char() {
+            if current_char == '\'' {
+                break;
+            } else if current_char == '\n' {
+                self.advance();
+                return Err(self.error(
+                    current_char.to_string(),
+                    format!("Expected closing qoute (')"),
+                ));
+            }
+            string_to_be.push(current_char);
+            self.advance();
+        }
+
+        if let Some(current_char) = self.current_char() {
+            self.advance();
+            if current_char == '\'' {
+                return Ok(self.token(string_to_be, TokenKind::String));
+            }
+        }
+
+        Err(self.error('\0'.to_string(), format!("Expected closing qoute (')")))
+    }
+
     fn token(&self, value: String, kind: TokenKind) -> Token {
         let value_len = value.len();
         Token::new(value, kind, self.location(value_len))
@@ -200,7 +229,6 @@ impl Lexer {
     }
 
     fn location(&self, value_len: usize) -> Location {
-        println!("pos: {}, value_len: {}", self.pos, value_len);
         let end = self.pos;
         let start = self.pos - value_len;
         Location::new(self.line, (self.col - value_len) + 1, start, end)
