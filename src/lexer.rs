@@ -97,8 +97,9 @@ impl Lexer {
                     if current_char.is_numeric() {
                         tokens.push(self.lex_numeric()?);
                     } else {
+                        self.advance();
                         return Err(
-                            self.error(current_char.to_string(), format!("Unexpected token"))
+                            self.error(current_char.to_string(), format!("Unknown character"))
                         );
                     }
                 }
@@ -199,6 +200,7 @@ impl Lexer {
     }
 
     fn location(&self, value_len: usize) -> Location {
+        println!("pos: {}, value_len: {}", self.pos, value_len);
         let end = self.pos;
         let start = self.pos - value_len;
         Location::new(self.line, (self.col - value_len) + 1, start, end)
