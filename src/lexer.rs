@@ -1,19 +1,21 @@
-#[derive(Debug, PartialEq, Eq)]
+use std::fmt;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Keyword {
+    Create,
+    Table,
     Select,
     Where,
     From,
-    As,
-    Table,
-    Create,
     Insert,
     Into,
     Values,
+    As,
     Int,
     Text,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Symbol {
     Semicolon,
     Asterisk,
@@ -22,7 +24,7 @@ pub enum Symbol {
     RightParen,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {
     Keyword(Keyword),
     Symbol(Symbol),
@@ -31,7 +33,37 @@ pub enum TokenKind {
     Numberic,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+impl fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Keyword(keyword) => match keyword {
+                Keyword::Create => write!(f, "CREATE"),
+                Keyword::Table => write!(f, "TABLE"),
+                Keyword::Select => write!(f, "SELECT"),
+                Keyword::Where => write!(f, "WHERE"),
+                Keyword::From => write!(f, "FROM"),
+                Keyword::Insert => write!(f, "INSERT"),
+                Keyword::Into => write!(f, "INTO"),
+                Keyword::Values => write!(f, "VALUES"),
+                Keyword::As => write!(f, "AS"),
+                Keyword::Int => write!(f, "INT"),
+                Keyword::Text => write!(f, "TEXT"),
+            },
+            Self::Symbol(symbol) => match symbol {
+                Symbol::Semicolon => write!(f, ";"),
+                Symbol::Asterisk => write!(f, "*"),
+                Symbol::Comma => write!(f, ","),
+                Symbol::LeftParen => write!(f, "("),
+                Symbol::RightParen => write!(f, ")"),
+            },
+            TokenKind::Identifier => write!(f, "<IDENTIFIER>"),
+            TokenKind::String => write!(f, "<STRING>"),
+            TokenKind::Numberic => write!(f, "<NUMERIC>"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Location {
     pub line: usize,
     pub col: usize,
@@ -50,7 +82,7 @@ impl Location {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
     pub value: String,
     pub kind: TokenKind,
