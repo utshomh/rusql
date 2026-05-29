@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, Eq)]
 pub enum Keyword {
     Select,
+    Where,
     From,
     As,
     Table,
@@ -13,9 +14,18 @@ pub enum Keyword {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub enum Symbol {
+    Semicolon,
+    Asterisk,
+    Comma,
+    LeftParen,
+    RightParen,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     Keyword(Keyword),
-    Symbol,
+    Symbol(Symbol),
     Identifier,
     String,
     Numberic,
@@ -93,6 +103,40 @@ impl Lexer {
         while let Some(current_char) = self.current_char() {
             match current_char {
                 ' ' | '\t' | '\r' | '\n' => self.skip_whitespaces(),
+                ';' => {
+                    self.advance();
+                    tokens.push(self.token(
+                        current_char.to_string(),
+                        TokenKind::Symbol(Symbol::Semicolon),
+                    ));
+                }
+                '*' => {
+                    self.advance();
+                    tokens.push(self.token(
+                        current_char.to_string(),
+                        TokenKind::Symbol(Symbol::Asterisk),
+                    ));
+                }
+                ',' => {
+                    self.advance();
+                    tokens.push(
+                        self.token(current_char.to_string(), TokenKind::Symbol(Symbol::Comma)),
+                    );
+                }
+                '(' => {
+                    self.advance();
+                    tokens.push(self.token(
+                        current_char.to_string(),
+                        TokenKind::Symbol(Symbol::LeftParen),
+                    ));
+                }
+                ')' => {
+                    self.advance();
+                    tokens.push(self.token(
+                        current_char.to_string(),
+                        TokenKind::Symbol(Symbol::RightParen),
+                    ));
+                }
                 '\'' => tokens.push(self.lex_string()?),
                 _ => {
                     if current_char.is_numeric() {
@@ -233,6 +277,7 @@ impl Lexer {
 
         match candidate.to_uppercase().as_str() {
             "SELECT" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Select))),
+            "WHERE" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Where))),
             "FROM" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::From))),
             "AS" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::As))),
             "TABLE" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Table))),
