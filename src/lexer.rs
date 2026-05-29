@@ -7,14 +7,14 @@ pub enum Keyword {
     Create,
     Insert,
     Into,
-    Value,
+    Values,
     Int,
     Text,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
-    Keyword,
+    Keyword(Keyword),
     Symbol,
     Identifier,
     String,
@@ -97,6 +97,8 @@ impl Lexer {
                 _ => {
                     if current_char.is_numeric() {
                         tokens.push(self.lex_numeric()?);
+                    } else if current_char.is_alphabetic() || current_char == '_' {
+                        tokens.push(self.lex_keyword_or_identifier()?);
                     } else {
                         self.advance();
                         return Err(
@@ -216,6 +218,32 @@ impl Lexer {
         }
 
         Err(self.error('\0'.to_string(), format!("Expected closing qoute (')")))
+    }
+
+    fn lex_keyword_or_identifier(&mut self) -> Result<Token, LexError> {
+        let mut candidate = String::new();
+        while let Some(current_char) = self.current_char() {
+            if current_char.is_alphanumeric() || current_char == '_' {
+                candidate.push(current_char);
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        match candidate.to_uppercase().as_str() {
+            "SELECT" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Select))),
+            "FROM" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::From))),
+            "AS" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::As))),
+            "TABLE" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Table))),
+            "CREATE" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Create))),
+            "INSERT" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Insert))),
+            "INTO" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Into))),
+            "VALUES" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Values))),
+            "INT" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Int))),
+            "TEXT" => Ok(self.token(candidate, TokenKind::Keyword(Keyword::Text))),
+            _ => Ok(self.token(candidate, TokenKind::Identifier)),
+        }
     }
 
     fn token(&self, value: String, kind: TokenKind) -> Token {
