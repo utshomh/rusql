@@ -339,3 +339,175 @@ impl Lexer {
         Location::new(self.line, (self.col - value_len) + 1, start, end)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn loc(line: usize, col: usize, start: usize, end: usize) -> Location {
+        Location::new(line, col, start, end)
+    }
+
+    fn token(
+        value: &str,
+        kind: TokenKind,
+        line: usize,
+        col: usize,
+        start: usize,
+        end: usize,
+    ) -> Token {
+        Token::new(value.to_string(), kind, loc(line, col, start, end))
+    }
+
+    fn lex(source: &str) -> Vec<Token> {
+        let mut lexer = Lexer::new(source);
+        lexer.lex().expect(source)
+    }
+
+    #[test]
+    fn test_lex_create_table() {
+        let tokens = lex("CREATE TABLE users (id INT, name TEXT);");
+
+        assert_eq!(
+            tokens,
+            vec![
+                token("CREATE", TokenKind::Keyword(Keyword::Create), 1, 1, 0, 6),
+                token("TABLE", TokenKind::Keyword(Keyword::Table), 1, 8, 7, 12),
+                token("users", TokenKind::Identifier, 1, 14, 13, 18),
+                token("(", TokenKind::Symbol(Symbol::LeftParen), 1, 20, 19, 20),
+                token("id", TokenKind::Identifier, 1, 21, 20, 22),
+                token("INT", TokenKind::Keyword(Keyword::Int), 1, 24, 23, 26),
+                token(",", TokenKind::Symbol(Symbol::Comma), 1, 27, 26, 27),
+                token("name", TokenKind::Identifier, 1, 29, 28, 32),
+                token("TEXT", TokenKind::Keyword(Keyword::Text), 1, 34, 33, 37),
+                token(")", TokenKind::Symbol(Symbol::RightParen), 1, 38, 37, 38),
+                token(";", TokenKind::Symbol(Symbol::Semicolon), 1, 39, 38, 39),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lex_insert_values() {
+        let tokens = lex("INSERT INTO users VALUES (111, 'utsho');");
+
+        assert_eq!(
+            tokens,
+            vec![
+                token("INSERT", TokenKind::Keyword(Keyword::Insert), 1, 1, 0, 6),
+                token("INTO", TokenKind::Keyword(Keyword::Into), 1, 8, 7, 11),
+                token("users", TokenKind::Identifier, 1, 13, 12, 17),
+                token("VALUES", TokenKind::Keyword(Keyword::Values), 1, 19, 18, 24),
+                token("(", TokenKind::Symbol(Symbol::LeftParen), 1, 26, 25, 26),
+                token("111", TokenKind::Numberic, 1, 27, 26, 29),
+                token(",", TokenKind::Symbol(Symbol::Comma), 1, 30, 29, 30),
+                token("utsho", TokenKind::String, 1, 34, 33, 38),
+                token(")", TokenKind::Symbol(Symbol::RightParen), 1, 39, 38, 39),
+                token(";", TokenKind::Symbol(Symbol::Semicolon), 1, 40, 39, 40),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lex_select_with_alias() {
+        let tokens = lex("SELECT id, name AS fullname FROM users;");
+
+        assert_eq!(
+            tokens,
+            vec![
+                token("SELECT", TokenKind::Keyword(Keyword::Select), 1, 1, 0, 6),
+                token("id", TokenKind::Identifier, 1, 8, 7, 9),
+                token(",", TokenKind::Symbol(Symbol::Comma), 1, 10, 9, 10),
+                token("name", TokenKind::Identifier, 1, 12, 11, 15),
+                token("AS", TokenKind::Keyword(Keyword::As), 1, 17, 16, 18),
+                token("fullname", TokenKind::Identifier, 1, 20, 19, 27),
+                token("FROM", TokenKind::Keyword(Keyword::From), 1, 29, 28, 32),
+                token("users", TokenKind::Identifier, 1, 34, 33, 38),
+                token(";", TokenKind::Symbol(Symbol::Semicolon), 1, 39, 38, 39),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lex_select_asterisk() {
+        let tokens = lex("SELECT * FROM users;");
+
+        assert_eq!(
+            tokens,
+            vec![
+                token("SELECT", TokenKind::Keyword(Keyword::Select), 1, 1, 0, 6),
+                token("*", TokenKind::Symbol(Symbol::Asterisk), 1, 8, 7, 8),
+                token("FROM", TokenKind::Keyword(Keyword::From), 1, 10, 9, 13),
+                token("users", TokenKind::Identifier, 1, 15, 14, 19),
+                token(";", TokenKind::Symbol(Symbol::Semicolon), 1, 20, 19, 20),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lex_keywords_are_case_insensitive_but_preserve_original_value() {
+        let tokens = lex("select Id FrOm users;");
+
+        assert_eq!(
+            tokens,
+            vec![
+                token("select", TokenKind::Keyword(Keyword::Select), 1, 1, 0, 6),
+                token("Id", TokenKind::Identifier, 1, 8, 7, 9),
+                token("FrOm", TokenKind::Keyword(Keyword::From), 1, 11, 10, 14),
+                token("users", TokenKind::Identifier, 1, 16, 15, 20),
+                token(";", TokenKind::Symbol(Symbol::Semicolon), 1, 21, 20, 21),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lex_multiline_locations() {
+        let tokens = lex("SELECT id\nFROM users;");
+
+        assert_eq!(
+            tokens,
+            vec![
+                token("SELECT", TokenKind::Keyword(Keyword::Select), 1, 1, 0, 6),
+                token("id", TokenKind::Identifier, 1, 8, 7, 9),
+                token("FROM", TokenKind::Keyword(Keyword::From), 2, 1, 10, 14),
+                token("users", TokenKind::Identifier, 2, 6, 15, 20),
+                token(";", TokenKind::Symbol(Symbol::Semicolon), 2, 11, 20, 21),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lex_numeric_variants() {
+        let tokens = lex("123 45.67 8e9");
+
+        assert_eq!(
+            tokens,
+            vec![
+                token("123", TokenKind::Numberic, 1, 1, 0, 3),
+                token("45.67", TokenKind::Numberic, 1, 5, 4, 9),
+                token("8e9", TokenKind::Numberic, 1, 11, 10, 13),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_lex_unknown_character_returns_error() {
+        let mut lexer = Lexer::new("SELECT @;");
+
+        let err = lexer.lex().expect_err("expected @ to be rejected");
+
+        assert_eq!(err.value, "@");
+        assert_eq!(err.message, "Unknown character");
+        assert_eq!(err.loc, loc(1, 8, 7, 8));
+    }
+
+    #[test]
+    fn test_lex_unclosed_string_returns_error() {
+        let mut lexer = Lexer::new("INSERT INTO users VALUES ('alice);");
+
+        let err = lexer
+            .lex()
+            .expect_err("expected unclosed string to be rejected");
+
+        assert_eq!(err.message, "Expected closing qoute (')");
+    }
+}
