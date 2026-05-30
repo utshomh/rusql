@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Ast, Expression, InsertStatement, LiteralExpression, Statement},
+    ast::{Ast, Expression, InsertStatement, LiteralExpression, SelectStatement, Statement},
     lexer::{Keyword, Symbol, Token, TokenKind},
 };
 
@@ -32,6 +32,7 @@ impl Parser {
         while let Some(token) = self.current_token() {
             match token.kind {
                 TokenKind::Keyword(Keyword::Insert) => ast.push(self.parse_insert_statement()?),
+                TokenKind::Keyword(Keyword::Select) => ast.push(self.parse_select_statement()?),
                 _ => {
                     return Err(ParseError::new(
                         format!("Unexpected token"),
@@ -111,10 +112,35 @@ impl Parser {
         Ok(Statement::Insert(InsertStatement::new(table_name, values)))
     }
 
+    fn parse_select_statement(&mut self) -> Result<Statement, ParseError> {
+        self.expect_and_consume_token(TokenKind::Keyword(Keyword::Select))?;
+
+        let mut items = Vec::new();
+        while let Some(token) = self.current_token()
+            && token.kind != TokenKind::Symbol(Symbol::Semicolon)
+        {
+            items.push(self.parse_expression()?);
+            if let Some(token) = self.current_token()
+                && token.kind == TokenKind::Symbol(Symbol::Comma)
+            {
+                self.advance();
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        self.expect_and_consume_token(TokenKind::Keyword(Keyword::From))?;
+        let from = self.expect_and_consume_token(TokenKind::Identifier)?;
+        self.expect_and_consume_token(TokenKind::Symbol(Symbol::Semicolon))?;
+
+        Ok(Statement::Select(SelectStatement::new(items, from)))
+    }
+
     fn parse_expression(&mut self) -> Result<Expression, ParseError> {
         if let Some(token) = self.current_token().cloned() {
             match token.kind {
-                TokenKind::String | TokenKind::Numberic => {
+                TokenKind::String | TokenKind::Numberic | TokenKind::Identifier => {
                     self.advance();
                     Ok(Expression::Literal(LiteralExpression::new(token)))
                 }

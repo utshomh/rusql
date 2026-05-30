@@ -5,7 +5,7 @@ pub type Ast = Vec<Statement>;
 #[derive(Debug)]
 pub enum Statement {
     CreateTable,
-    Select,
+    Select(SelectStatement),
     Insert(InsertStatement),
 }
 
@@ -23,8 +23,14 @@ pub struct CreateTableStatement {
 
 #[derive(Debug)]
 pub struct SelectStatement {
-    pub item: Vec<Expression>,
+    pub items: Vec<Expression>,
     pub from: Token,
+}
+
+impl SelectStatement {
+    pub fn new(items: Vec<Expression>, from: Token) -> Self {
+        Self { items, from }
+    }
 }
 
 #[derive(Debug)]
