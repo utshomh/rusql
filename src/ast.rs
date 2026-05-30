@@ -4,7 +4,7 @@ pub type Ast = Vec<Statement>;
 
 #[derive(Debug)]
 pub enum Statement {
-    CreateTable,
+    CreateTable(CreateTableStatement),
     Select(SelectStatement),
     Insert(InsertStatement),
 }
@@ -15,10 +15,22 @@ pub struct ColumnDefinition {
     pub datatype: Token,
 }
 
+impl ColumnDefinition {
+    pub fn new(name: Token, datatype: Token) -> Self {
+        Self { name, datatype }
+    }
+}
+
 #[derive(Debug)]
 pub struct CreateTableStatement {
     pub name: Token,
     pub cols: Vec<ColumnDefinition>,
+}
+
+impl CreateTableStatement {
+    pub fn new(name: Token, cols: Vec<ColumnDefinition>) -> Self {
+        Self { name, cols }
+    }
 }
 
 #[derive(Debug)]
