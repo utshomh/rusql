@@ -200,3 +200,148 @@ impl Parser {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::ast::{Ast, ColumnDefinition, Expression, LiteralExpression, Statement};
+    use crate::lexer::{Keyword, Lexer, Location, Token, TokenKind};
+
+    fn loc(line: usize, col: usize, start: usize, end: usize) -> Location {
+        Location::new(line, col, start, end)
+    }
+
+    fn token(
+        value: &str,
+        kind: TokenKind,
+        line: usize,
+        col: usize,
+        start: usize,
+        end: usize,
+    ) -> Token {
+        Token::new(value.to_string(), kind, loc(line, col, start, end))
+    }
+
+    fn parse_source(source: &str) -> Ast {
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.lex().expect(source);
+
+        let mut parser = Parser::new(tokens);
+        parser.parse().expect(source)
+    }
+
+    fn assert_literal(expr: &Expression, expected: Token) {
+        match expr {
+            Expression::Literal(LiteralExpression { literal }) => {
+                assert_eq!(literal, &expected);
+            }
+        }
+    }
+
+    fn assert_col(col: &ColumnDefinition, expected_name: Token, expected_datatype: Token) {
+        assert_eq!(col.name, expected_name);
+        assert_eq!(col.datatype, expected_datatype);
+    }
+
+    #[test]
+    fn test_parse_expression_numeric_literal() {
+        let mut lexer = Lexer::new("2");
+        let tokens = lexer.lex().expect("lex numeric literal");
+
+        let mut parser = Parser::new(tokens);
+        let expr = parser.parse_expression().expect("parse numeric literal");
+
+        assert_literal(&expr, token("2", TokenKind::Numberic, 1, 1, 0, 1));
+        assert_eq!(parser.pos, 1);
+    }
+
+    #[test]
+    fn test_parse_insert() {
+        let ast = parse_source("INSERT INTO users VALUES (1, 'utsho');");
+
+        assert_eq!(ast.len(), 1);
+
+        match &ast[0] {
+            Statement::Insert(stmt) => {
+                assert_eq!(
+                    stmt.table_name,
+                    token("users", TokenKind::Identifier, 1, 13, 12, 17)
+                );
+
+                assert_eq!(stmt.values.len(), 2);
+
+                assert_literal(
+                    &stmt.values[0],
+                    token("1", TokenKind::Numberic, 1, 27, 26, 27),
+                );
+
+                assert_literal(
+                    &stmt.values[1],
+                    token("utsho", TokenKind::String, 1, 32, 31, 36),
+                );
+            }
+            other => panic!("expected INSERT statement, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_create_table() {
+        let ast = parse_source("CREATE TABLE users (id INT, name TEXT);");
+
+        assert_eq!(ast.len(), 1);
+
+        match &ast[0] {
+            Statement::CreateTable(stmt) => {
+                assert_eq!(
+                    stmt.name,
+                    token("users", TokenKind::Identifier, 1, 14, 13, 18)
+                );
+
+                assert_eq!(stmt.cols.len(), 2);
+
+                assert_col(
+                    &stmt.cols[0],
+                    token("id", TokenKind::Identifier, 1, 21, 20, 22),
+                    token("INT", TokenKind::Keyword(Keyword::Int), 1, 24, 23, 26),
+                );
+
+                assert_col(
+                    &stmt.cols[1],
+                    token("name", TokenKind::Identifier, 1, 29, 28, 32),
+                    token("TEXT", TokenKind::Keyword(Keyword::Text), 1, 34, 33, 37),
+                );
+            }
+            other => panic!("expected CREATE TABLE statement, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_select() {
+        let ast = parse_source("SELECT id, name FROM users;");
+
+        assert_eq!(ast.len(), 1);
+
+        match &ast[0] {
+            Statement::Select(stmt) => {
+                assert_eq!(stmt.items.len(), 2);
+
+                assert_literal(
+                    &stmt.items[0],
+                    token("id", TokenKind::Identifier, 1, 8, 7, 9),
+                );
+
+                assert_literal(
+                    &stmt.items[1],
+                    token("name", TokenKind::Identifier, 1, 12, 11, 15),
+                );
+
+                assert_eq!(
+                    stmt.from,
+                    token("users", TokenKind::Identifier, 1, 22, 21, 26)
+                );
+            }
+            other => panic!("expected SELECT statement, got {other:?}"),
+        }
+    }
+}
