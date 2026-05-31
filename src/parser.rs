@@ -127,17 +127,23 @@ impl Parser {
         self.expect_and_consume_token(&[TokenKind::Keyword(Keyword::Select)])?;
 
         let mut items = Vec::new();
-        while let Some(token) = self.current_token()
-            && token.kind != TokenKind::Symbol(Symbol::Semicolon)
+        if let Some(token) = self.current_token()
+            && token.kind == TokenKind::Symbol(Symbol::Asterisk)
         {
-            items.push(self.parse_expression()?);
-            if let Some(token) = self.current_token()
-                && token.kind == TokenKind::Symbol(Symbol::Comma)
+            self.advance();
+        } else {
+            while let Some(token) = self.current_token()
+                && token.kind != TokenKind::Symbol(Symbol::Semicolon)
             {
-                self.advance();
-                continue;
-            } else {
-                break;
+                items.push(self.parse_expression()?);
+                if let Some(token) = self.current_token()
+                    && token.kind == TokenKind::Symbol(Symbol::Comma)
+                {
+                    self.advance();
+                    continue;
+                } else {
+                    break;
+                }
             }
         }
 
@@ -193,7 +199,10 @@ impl Parser {
                     self.advance();
                     Ok(Expression::Literal(LiteralExpression::new(token)))
                 }
-                _ => todo!(),
+                _ => Err(ParseError::new(
+                    format!("Unexpected token: {}", token.kind),
+                    vec![token],
+                )),
             }
         } else {
             Err(ParseError::new(format!("Unexpected end of token"), vec![]))
