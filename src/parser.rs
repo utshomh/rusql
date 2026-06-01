@@ -240,6 +240,13 @@ mod tests {
         parser.parse().expect(source)
     }
 
+    fn parse_source_err(source: &str) -> ParseError {
+        let mut lexer = Lexer::new(source);
+        let tokens = lexer.lex().expect(source);
+        let mut parser = Parser::new(tokens);
+        parser.parse().expect_err(source)
+    }
+
     fn assert_literal(expr: &Expression, expected: Token) {
         match expr {
             Expression::Literal(LiteralExpression { literal }) => {
@@ -295,6 +302,49 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_insert_mixed_literal_values() {
+        let ast = parse_source("INSERT INTO users VALUES (1, 'utsho', name);");
+        assert_eq!(ast.len(), 1);
+
+        match &ast[0] {
+            Statement::Insert(stmt) => {
+                assert_eq!(stmt.values.len(), 3);
+                assert_literal(
+                    &stmt.values[0],
+                    token("1", TokenKind::Numberic, 1, 27, 26, 27),
+                );
+                assert_literal(
+                    &stmt.values[1],
+                    token("utsho", TokenKind::String, 1, 32, 31, 36),
+                );
+                assert_literal(
+                    &stmt.values[2],
+                    token("name", TokenKind::Identifier, 1, 39, 38, 42),
+                );
+            }
+            other => panic!("expected INSERT statement, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_insert_requires_closing_paren() {
+        let err = parse_source_err("INSERT INTO users VALUES (1;");
+
+        assert!(err.message.contains(")"));
+        assert_eq!(
+            err.tokens[0],
+            token(
+                ";",
+                TokenKind::Symbol(crate::lexer::Symbol::Semicolon),
+                1,
+                28,
+                27,
+                28,
+            )
+        );
+    }
+
+    #[test]
     fn test_parse_create_table() {
         let ast = parse_source("CREATE TABLE users (id INT, name TEXT);");
 
@@ -320,6 +370,23 @@ mod tests {
                     token("name", TokenKind::Identifier, 1, 29, 28, 32),
                     token("TEXT", TokenKind::Keyword(Keyword::Text), 1, 34, 33, 37),
                 );
+            }
+            other => panic!("expected CREATE TABLE statement, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_empty_create_table() {
+        let ast = parse_source("CREATE TABLE users ();");
+        assert_eq!(ast.len(), 1);
+
+        match &ast[0] {
+            Statement::CreateTable(stmt) => {
+                assert_eq!(
+                    stmt.name,
+                    token("users", TokenKind::Identifier, 1, 14, 13, 18)
+                );
+                assert!(stmt.cols.is_empty());
             }
             other => panic!("expected CREATE TABLE statement, got {other:?}"),
         }
@@ -352,5 +419,65 @@ mod tests {
             }
             other => panic!("expected SELECT statement, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn test_parse_select_asterisk() {
+        let ast = parse_source("SELECT * FROM users;");
+        assert_eq!(ast.len(), 1);
+
+        match &ast[0] {
+            Statement::Select(stmt) => {
+                assert!(stmt.items.is_empty());
+                assert_eq!(
+                    stmt.from,
+                    token("users", TokenKind::Identifier, 1, 15, 14, 19)
+                );
+            }
+            other => panic!("expected SELECT statement, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_parse_multiple_statements() {
+        let ast = parse_source("SELECT id FROM users; INSERT INTO users VALUES (1);");
+        assert_eq!(ast.len(), 2);
+        assert!(matches!(&ast[0], Statement::Select(_)));
+        assert!(matches!(&ast[1], Statement::Insert(_)));
+    }
+
+    #[test]
+    fn test_parse_select_requires_from_clause() {
+        let err = parse_source_err("SELECT id users;");
+
+        assert!(err.message.contains("Expected token"));
+        assert_eq!(
+            err.tokens[0],
+            token("users", TokenKind::Identifier, 1, 11, 10, 15)
+        );
+    }
+
+    #[test]
+    fn test_parse_expression_rejects_unexpected_token() {
+        let mut lexer = Lexer::new("*");
+        let tokens = lexer.lex().expect("lex asterisk");
+        let mut parser = Parser::new(tokens);
+
+        let err = parser
+            .parse_expression()
+            .expect_err("asterisk is not a literal expression");
+
+        assert_eq!(err.message, "Unexpected token: *");
+        assert_eq!(
+            err.tokens[0],
+            token(
+                "*",
+                TokenKind::Symbol(crate::lexer::Symbol::Asterisk),
+                1,
+                1,
+                0,
+                1,
+            )
+        );
     }
 }
