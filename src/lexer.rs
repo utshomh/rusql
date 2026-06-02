@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Keyword {
     Create,
     Table,
@@ -15,7 +15,7 @@ pub enum Keyword {
     Text,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Symbol {
     Semicolon,
     Asterisk,
@@ -24,7 +24,7 @@ pub enum Symbol {
     RightParen,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
     Keyword(Keyword),
     Symbol(Symbol),
@@ -63,7 +63,7 @@ impl fmt::Display for TokenKind {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Location {
     pub line: usize,
     pub col: usize,
@@ -82,7 +82,7 @@ impl Location {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub value: String,
     pub kind: TokenKind,
