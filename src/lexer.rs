@@ -178,7 +178,7 @@ impl Lexer {
                     } else {
                         self.advance();
                         return Err(
-                            self.error(current_char.to_string(), format!("Unknown character"))
+                            self.error(current_char.to_string(), format!("unknown character"))
                         );
                     }
                 }
@@ -243,7 +243,7 @@ impl Lexer {
                     } else {
                         return Err(self.error(
                             next_char.to_string(),
-                            format!("Expected numeric value after period (.)"),
+                            format!("expected numeric value after period (.)"),
                         ));
                     }
                 }
@@ -256,7 +256,7 @@ impl Lexer {
                     } else {
                         return Err(self.error(
                             next_char.to_string(),
-                            format!("Expected numeric value after exponent marker (e)"),
+                            format!("expected numeric value after exponent marker (e)"),
                         ));
                     }
                 }
@@ -279,7 +279,7 @@ impl Lexer {
                 self.advance();
                 return Err(self.error(
                     current_char.to_string(),
-                    format!("Expected closing qoute (')"),
+                    format!("expected closing qoute (')"),
                 ));
             }
             string_to_be.push(current_char);
@@ -293,7 +293,7 @@ impl Lexer {
             }
         }
 
-        Err(self.error('\0'.to_string(), format!("Expected closing qoute (')")))
+        Err(self.error('\0'.to_string(), format!("expected closing qoute (')")))
     }
 
     fn lex_keyword_or_identifier(&mut self) -> Result<Token, LexError> {
@@ -496,7 +496,7 @@ mod tests {
         let err = lexer.lex().expect_err("expected @ to be rejected");
 
         assert_eq!(err.value, "@");
-        assert_eq!(err.message, "Unknown character");
+        assert_eq!(err.message, "unknown character");
         assert_eq!(err.loc, loc(1, 8, 7, 8));
     }
 
@@ -508,6 +508,6 @@ mod tests {
             .lex()
             .expect_err("expected unclosed string to be rejected");
 
-        assert_eq!(err.message, "Expected closing qoute (')");
+        assert_eq!(err.message, "expected closing qoute (')");
     }
 }

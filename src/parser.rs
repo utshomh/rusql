@@ -39,7 +39,7 @@ impl Parser {
                 TokenKind::Keyword(Keyword::Create) => ast.push(self.parse_create_statement()?),
                 _ => {
                     return Err(ParseError::new(
-                        format!("Unexpected token"),
+                        format!("unexpected token"),
                         vec![token.clone()],
                     ));
                 }
@@ -80,7 +80,7 @@ impl Parser {
             } else {
                 Err(ParseError::new(
                     format!(
-                        "Expected token to be one of the following: {}",
+                        "expected token to be one of the following: {}",
                         expected_token_kinds
                             .iter()
                             .map(|it| it.to_string())
@@ -91,7 +91,7 @@ impl Parser {
                 ))
             }
         } else {
-            Err(ParseError::new(format!("Unexpected end of token"), vec![]))
+            Err(ParseError::new(format!("unexpected end of token"), vec![]))
         }
     }
 
@@ -200,12 +200,12 @@ impl Parser {
                     Ok(Expression::Literal(LiteralExpression::new(token)))
                 }
                 _ => Err(ParseError::new(
-                    format!("Unexpected token: {}", token.kind),
+                    format!("unexpected token: {}", token.kind),
                     vec![token],
                 )),
             }
         } else {
-            Err(ParseError::new(format!("Unexpected end of token"), vec![]))
+            Err(ParseError::new(format!("unexpected end of token"), vec![]))
         }
     }
 }
@@ -450,7 +450,7 @@ mod tests {
     fn test_parse_select_requires_from_clause() {
         let err = parse_source_err("SELECT id users;");
 
-        assert!(err.message.contains("Expected token"));
+        assert!(err.message.contains("expected token"));
         assert_eq!(
             err.tokens[0],
             token("users", TokenKind::Identifier, 1, 11, 10, 15)
@@ -467,7 +467,7 @@ mod tests {
             .parse_expression()
             .expect_err("asterisk is not a literal expression");
 
-        assert_eq!(err.message, "Unexpected token: *");
+        assert_eq!(err.message, "unexpected token: *");
         assert_eq!(
             err.tokens[0],
             token(
