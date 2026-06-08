@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{CreateTableStatement, InsertStatement, SelectStatement, Statement},
-    lexer::Token,
+    ast::{
+        CreateTableStatement, Expression, InsertStatement, LiteralExpression, SelectStatement,
+        Statement,
+    },
+    lexer::{Token, TokenKind},
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -120,10 +123,45 @@ impl Database {
     }
 
     fn insert(&mut self, stmt: InsertStatement) -> Result<ExecutionResult, ExecutionError> {
-        todo!();
+        if let Some(table) = self.tables.get_mut(&stmt.table_name.value) {
+            if table.columns.len() != stmt.values.len() {
+                return Err(ExecutionError::new(
+                    format!(
+                        "expected {} values, got {}",
+                        table.columns.len(),
+                        stmt.values.len()
+                    ),
+                    vec![stmt.table_name],
+                ));
+            }
+
+            let mut values = Vec::new();
+            for expr in stmt.values {
+                values.push(Self::expression(table, expr)?);
+            }
+
+            table.rows.push(values);
+
+            Ok(ExecutionResult::Ok)
+        } else {
+            Err(ExecutionError::new(
+                format!("table '{}' doesn't exists", &stmt.table_name.value),
+                vec![stmt.table_name],
+            ))
+        }
     }
 
     fn select(&mut self, stmt: SelectStatement) -> Result<ExecutionResult, ExecutionError> {
         todo!();
+    }
+
+    fn expression(table: &mut Table, expr: Expression) -> Result<Value, ExecutionError> {
+        match expr {
+            Expression::Literal(expr) => match expr.literal.kind {
+                TokenKind::String => Ok(Value::Text(expr.literal.value)),
+                TokenKind::Numberic => Ok(Value::Int(expr.literal.value.parse().unwrap())),
+                _ => Err(ExecutionError::new(format!(""), vec![expr.literal])),
+            },
+        }
     }
 }
